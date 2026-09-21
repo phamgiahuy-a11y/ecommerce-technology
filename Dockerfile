@@ -1,18 +1,24 @@
-# Sử dụng môi trường Node.js (ví dụ bản 24.15.0)
-FROM node:24.15.0-alpine
+FROM node:22-alpine AS builder
 
-# Thiết lập thư mục làm việc bên trong container
 WORKDIR /app
 
-# Copy file cấu hình package.json và cài đặt thư viện
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+
 COPY package*.json ./
 RUN npm install
 
-# Copy toàn bộ mã nguồn dự án vào container
 COPY . .
+RUN npm run build
 
-# Mở cổng mạng (ví dụ 3000)
+FROM node:22-alpine AS runner
+
+WORKDIR /app
+RUN npm install -g serve
+COPY --from=builder /app/dist ./dist
+
 EXPOSE 3000
-
-# Lệnh khởi động ứng dụng
-CMD ["npm", "start"]
+CMD ["serve", "-s", "dist", "-l", "3000"]
